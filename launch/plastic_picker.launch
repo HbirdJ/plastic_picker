@@ -34,7 +34,7 @@
         <arg name="moveit_sensor_manager" value="fanuc_m10ia" />
     </include>
 
-    <node pkg="tf" type="static_transform_publisher" name="kinect2robot_broadcaster" args="2 0 .92 1.5708 0 -2.1418 base_link kinect2_ir_optical_frame 100" />
+    <node pkg="tf" type="static_transform_publisher" name="kinect2robot_broadcaster" args="2.035 0 .92 1.5708 0 -2.1418 base_link kinect2_ir_optical_frame 100" />
     
     
     <arg name="base_name"         default="kinect2"/>

@@ -6,7 +6,7 @@ import moveit_commander
 import sys
 import geometry_msgs.msg
 import moveit_msgs.msg
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, PoseArray
 import tf2_ros
 import tf2_geometry_msgs
 from ros_cgio_py import FanucCGIO
@@ -17,19 +17,33 @@ def goto(goal):
     plan1 = one_arm.plan()
     one_arm.go(wait=True)
 
-def recieve_goal(goal_pose):
-    print "recieved pose:"
-    print goal_pose.pose.position
-    goto(goal_pose.pose)
-    goal_pose.pose.position.z = .18
+def recieve_goal(goal_array):
+    print "recieved pose array:"
+    for goal_pose in goal_array.poses:
+        if goal_pose.position.z > .12:
+            print goal_pose.position
+            goal_pose.position.z += .2
+            goto(goal_pose)
+            goal_pose.position.z -= .22
+            goto(goal_pose)
+            pickup()
+            
+            goal_pose.position.z += .2
+            goto(goal_pose)
+            
+            goal_pose.position.z = .45
+            goal_pose.position.y = .7
+            goal_pose.position.x = .3
+            goto(goal_pose)
+            drop()
+        else:
+            print "Z-coordinate is dangerously low"
+            
+    goal_pose.position.z = .7
+    goal_pose.position.y = 0
+    goal_pose.position.x = .8
     goto(goal_pose)
-    pickup()
-    goal_pose.pose.position.z = .7
-    goal_pose.pose.position.y = 0
-    goal_pose.pose.position.x = .8
-    goto(goal_pose)
-    drop()
-    rospy.sleep(5)
+    rospy.sleep(7)
     
 def pickup():
     gripper.write_robot_dout(3,1)
@@ -60,7 +74,7 @@ if __name__ == '__main__':
     rospy.init_node('goalsender', anonymous=True)
     
     # Create Subscribers
-    goal_sub = rospy.Subscriber("/goalsend", PoseStamped, recieve_goal, queue_size=1)
+    goal_sub = rospy.Subscriber("/goals_send", PoseArray, recieve_goal, queue_size=1)
 	
     while not rospy.is_shutdown():
         print "Node running"
