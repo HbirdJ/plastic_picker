@@ -6,35 +6,87 @@ import moveit_commander
 import sys
 import geometry_msgs.msg
 import moveit_msgs.msg
-from geometry_msgs.msg import PoseStamped, PoseArray
+from geometry_msgs.msg import PoseStamped, PoseArray, Pose
 import tf2_ros
 import tf2_geometry_msgs
 from ros_cgio_py import FanucCGIO
+from numpy.random import choice
 print "Import complete"
 
 def goto(goal):
+    print "Recieved (%.2f,%.2f,%.2f)" % (goal.position.x, goal.position.y, goal.position.z)
+#    goal.orientation.w =  0.0 
+#    goal.orientation.x =  0.7071068
+#    goal.orientation.y =  0.7071068
+#    goal.orientation.z = 0.0
     one_arm.set_pose_target(goal)
     plan1 = one_arm.plan()
     one_arm.go(wait=True)
+    
+def goto_drop(goal):
+    print "Recieved (%.2f,%.2f,%.2f)" % (goal.position.x, goal.position.y, goal.position.z)
+    goal.orientation.w =  0.0 
+    goal.orientation.x =  0.7071068
+    goal.orientation.y =  0.7071068
+    goal.orientation.z = 0.0
+    one_arm.set_pose_target(goal)
+    plan1 = one_arm.plan()
+    one_arm.go(wait=False)
+    rospy.sleep(1.5)
+    drop()
+    rospy.sleep(3)
+    
+def posemake(x, y, z, yaw):
+    new_pose = Pose()
+    new_pose.position.z = z
+    new_pose.position.y = y
+    new_pose.position.x = x
+    
+    if yaw == 0:
+        new_pose.orientation.w =  0.0 
+        new_pose.orientation.x =  1.0
+        new_pose.orientation.y =  0.0
+        new_pose.orientation.z = 0.0
+    elif yaw == 90:
+        new_pose.orientation.w =  0.0 
+        new_pose.orientation.x =  0.7071068
+        new_pose.orientation.y =  0.7071068
+        new_pose.orientation.z = 0.0
+    elif yaw == 180:
+        new_pose.orientation.w =  0.0 
+        new_pose.orientation.x =  0.0
+        new_pose.orientation.y =  1.0
+        new_pose.orientation.z = 0.0
+    elif yaw == 69:
+        new_pose.orientation.w =  0.3729548 
+        new_pose.orientation.x =  0.5330771
+        new_pose.orientation.y =  0.691254
+        new_pose.orientation.z = 0.3144859
+    else:
+        new_pose.orientation.w =  0.0 
+        new_pose.orientation.x =  0.7071068
+        new_pose.orientation.y =  0.7071068
+        new_pose.orientation.z = 0.0
+        
+    return new_pose
+    
 
-def recieve_goal(goal_array):
-    print "recieved pose array:"
+def recieve_goals(goal_array):
+    print "recieved new pose array"
     for goal_pose in goal_array.poses:
-        if goal_pose.position.z > .12:
-            print goal_pose.position
+        if goal_pose.position.z > .15:
+#            print goal_pose.position
+            
             goal_pose.position.z += .2
             goto(goal_pose)
-            goal_pose.position.z -= .22
+            goal_pose.position.z -= .21
             goto(goal_pose)
             pickup()
             
-            goal_pose.position.z += .2
+            goal_pose.position.z += .6
             goto(goal_pose)
             
-            goal_pose.position.z = .45
-            goal_pose.position.y = .7
-            goal_pose.position.x = .3
-            goto(goal_pose)
+            goto(pose_blue)
             drop()
         else:
             print "Z-coordinate is dangerously low"
@@ -42,8 +94,45 @@ def recieve_goal(goal_array):
     goal_pose.position.z = .7
     goal_pose.position.y = 0
     goal_pose.position.x = .8
-    goto(goal_pose)
-    rospy.sleep(7)
+    goto(pose_neutral)
+    rospy.sleep(10)
+    
+def recieve_goal(goal_pose):
+    print "recieved new pose"
+    drop_points = [pose_red, pose_blue, pose_reject]
+    drop_point_p = [.2, .2, .6]
+    drop_pose = posemake(goal_pose.pose.orientation.x,
+                         goal_pose.pose.orientation.y,
+                         goal_pose.pose.orientation.z,
+                         goal_pose.pose.orientation.w)
+    goal_pose.pose.orientation.w =  0.0 
+    goal_pose.pose.orientation.x =  0.7071068
+    goal_pose.pose.orientation.y =  0.7071068
+    goal_pose.pose.orientation.z = 0.0
+    if goal_pose.pose.position.z > .15:
+#            print goal_pose.position
+        goal_pose.pose.position.z += .2
+        goal_pose.pose.position.y -= .005
+        goto(goal_pose.pose)
+        goal_pose.pose.position.z -= .216
+        goto(goal_pose.pose)
+        pickup()
+        
+        goal_pose.pose.position.z += .6
+        goto(goal_pose.pose)
+        
+#        goto_drop(pose_oops)
+#        drop()
+        
+#        print choice(drop_points, 1, p=drop_point_p)
+#        goto(choice(drop_points, 1, p=drop_point_p)[0])
+        goto(drop_pose)
+        drop()
+    else:
+        print "Z-coordinate is dangerously low"
+            
+    goto(pose_neutral)
+    rospy.sleep(1)
     
 def pickup():
     gripper.write_robot_dout(3,1)
@@ -56,26 +145,44 @@ def drop():
     rospy.sleep(.05)
     gripper.write_robot_dout(1,0)
     
-    
+def shutdown():
+    print "Shutting down mover. Returning to neutral..."
+    gripper.write_robot_dout(1,0)
+    gripper.write_robot_dout(3,0)
+    goto(pose_neutral)
+    print "bye!"
+  
     
 
 if __name__ == '__main__':
     gripper = FanucCGIO('192.168.1.69')
-    rdio = gripper.read_robot_dout(1)
-    print("RDOUT[1] is currently {0}".format("On" if rdio == 1 else "Off"))
+#    rdio = gripper.read_robot_dout(1)
+#    print("RDOUT[1] is currently {0}".format("On" if rdio == 1 else "Off"))
     
     moveit_commander.roscpp_initialize(sys.argv)
     
     rob = moveit_commander.RobotCommander()
     one_arm = moveit_commander.MoveGroupCommander("manipulator")
+    one_arm.set_workspace([-1,.1,1,1])
+    print rob.get_current_state()
     print "Connected to One Arm"
     
+    
+    pose_neutral = posemake(0, .8, .8, 90)
+    pose_oops = posemake(0, .8, .5, 90)
+    pose_blue = posemake(-.73, .313, .5, 180)
+    pose_red = posemake(.847, .246, .5, 0)
+    pose_reject = posemake(.5, .5, .8, 90)
+            
     # ROS node initialization
     rospy.init_node('goalsender', anonymous=True)
     
     # Create Subscribers
-    goal_sub = rospy.Subscriber("/goals_send", PoseArray, recieve_goal, queue_size=1)
+#    goals_sub = rospy.Subscriber("/goal_list", PoseArray, recieve_goals, queue_size=1)
+    goal_sub = rospy.Subscriber("/goal_single", PoseStamped, recieve_goal, queue_size=1)
 	
     while not rospy.is_shutdown():
         print "Node running"
         rospy.spin()
+        
+    rospy.on_shutdown(shutdown)
