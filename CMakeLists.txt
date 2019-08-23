@@ -11,6 +11,8 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   tf2_sensor_msgs
+  pcl_conversions
+  pcl_ros
 )
 
 ## System dependencies are found with CMake's conventions
@@ -198,3 +200,7 @@ install(PROGRAMS
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+add_executable(segmentation_cpp src/segmentationV2.cpp)
+target_link_libraries(segmentation_cpp ${catkin_LIBRARIES})
+add_dependencies(segmentation_cpp plastic_picker)

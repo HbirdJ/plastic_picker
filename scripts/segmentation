@@ -107,7 +107,7 @@ def segmentation():
          
 
     # Create Subscribers
-    pcl_sub = rospy.Subscriber("/kinect2/sd/points", pc2.PointCloud2, pcl_newmsg, queue_size=1, buff_size=2**23)
+    pcl_sub = rospy.Subscriber("/output", pc2.PointCloud2, pcl_newmsg, queue_size=1, buff_size=2**23)
 
     # Create Publishers
     pcl_clusters_pub = rospy.Publisher("/clusters", PointCloud2, queue_size=1)
@@ -257,7 +257,6 @@ def segmentation():
                 
                 
                 
-                
                 #Make segmented point clound
                 for i, indice in enumerate(indices):
                     x = white_cloud[indice][0]
@@ -272,8 +271,8 @@ def segmentation():
             print "(x:%.1f y:%.1f z:%.1f)" % ((goal_tf.pose.position.x-.08)*100, (goal_tf.pose.position.y-1)*100, (goal_tf.pose.position.z-(.145+.12))*100)
                 
             #Create new cloud containing all clusters, each with unique color
-            cloud_clusters = pcl.PointCloud_PointXYZRGB()
-            cloud_clusters.from_list(color_cluster_point_list)
+#            cloud_clusters = pcl.PointCloud_PointXYZRGB()
+#            cloud_clusters.from_list(color_cluster_point_list)
             
 #            for centroid in centroids:
 #                print "(x:%.1f y:%.1f z:%.1f)" % ((centroid.position.x)*100, (centroid.position.y-1)*100, (centroid.position.z-.14)*100)
@@ -282,23 +281,30 @@ def segmentation():
             object_markers_pub.publish(marker)   
             
             
-            ros_clust = pcl_to_ros(cloud_clusters)
-            ros_filtered = pcl_to_ros(cloud_objects)
+#            ros_clust = pcl_to_ros(cloud_clusters)
+#            ros_filtered = pcl_to_ros(cloud_objects)
             
-            ros_box = pcl_to_ros(pcl_box)
-            ros_floor = pcl_to_ros(pcl_floor)
+#            ros_box = pcl_to_ros(pcl_box)
+#            ros_floor = pcl_to_ros(pcl_floor)
             
-            ros_clust_tf = do_transform_cloud(ros_clust, kinect_transform)
-            ros_filtered_tf = do_transform_cloud(ros_filtered, kinect_transform)
-            ros_box_tf = do_transform_cloud(ros_box, kinect_transform)
-            ros_floor_tf = do_transform_cloud(ros_floor, kinect_transform)
-            
-            pcl_box_pub.publish(ros_box_tf)
-            pcl_floor_pub.publish(ros_floor_tf)
-            
-            pcl_filtered_pub.publish(ros_filtered_tf)
-            pcl_clusters_pub.publish(ros_clust_tf)
+#            ros_clust_tf = do_transform_cloud(ros_clust, kinect_transform)
+#            ros_filtered_tf = do_transform_cloud(ros_filtered, kinect_transform)
+#            ros_box_tf = do_transform_cloud(ros_box, kinect_transform)
+#            ros_floor_tf = do_transform_cloud(ros_floor, kinect_transform)
+#            
+#            pcl_box_pub.publish(ros_box_tf)
+#            pcl_floor_pub.publish(ros_floor_tf)
+#            
+#            pcl_filtered_pub.publish(ros_filtered_tf)
+#            pcl_clusters_pub.publish(ros_clust_tf)
 #            raw_input("Press Enter to continue...")
+           
+            
+            goal_tf_highest.pose.orientation.w =  0.0 
+            goal_tf_highest.pose.orientation.x =  0.7071068
+            goal_tf_highest.pose.orientation.y =  0.7071068
+            goal_tf_highest.pose.orientation.z = 0.0
+            
             goal_pub.publish(goal_tf_highest)
 #            goals_pub.publish(goal_poses)
             

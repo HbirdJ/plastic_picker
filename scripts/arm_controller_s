@@ -13,6 +13,8 @@ from ros_cgio_py import FanucCGIO
 from numpy.random import choice
 print "Import complete"
 
+gripper_working = False
+
 def goto(goal):
     print "Recieved (%.2f,%.2f,%.2f)" % (goal.position.x, goal.position.y, goal.position.z)
 #    goal.orientation.w =  0.0 
@@ -21,6 +23,9 @@ def goto(goal):
 #    goal.orientation.z = 0.0
     one_arm.set_pose_target(goal)
     plan1 = one_arm.plan()
+    print len(plan1.joint_trajectory.points)
+#    print plan1.joint_trajectory.points.count()
+    
     one_arm.go(wait=True)
     
 def goto_drop(goal):
@@ -101,10 +106,11 @@ def recieve_goal(goal_pose):
     print "recieved new pose"
     drop_points = [pose_red, pose_blue, pose_reject]
     drop_point_p = [.2, .2, .6]
-    drop_pose = posemake(goal_pose.pose.orientation.x,
-                         goal_pose.pose.orientation.y,
-                         goal_pose.pose.orientation.z,
-                         goal_pose.pose.orientation.w)
+#    drop_pose = posemake(goal_pose.pose.orientation.x,
+#                         goal_pose.pose.orientation.y,
+#                         goal_pose.pose.orientation.z,
+#                         goal_pose.pose.orientation.w)
+    drop_pose = pose_red
     goal_pose.pose.orientation.w =  0.0 
     goal_pose.pose.orientation.x =  0.7071068
     goal_pose.pose.orientation.y =  0.7071068
@@ -132,30 +138,35 @@ def recieve_goal(goal_pose):
         print "Z-coordinate is dangerously low"
             
     goto(pose_neutral)
-    rospy.sleep(1)
+#    rospy.sleep(1)
     
 def pickup():
-    gripper.write_robot_dout(3,1)
+    if gripper_working:
+        gripper.write_robot_dout(3,1)
     print "pickup"
     
 def drop():
-    gripper.write_robot_dout(3,0)
-    gripper.write_robot_dout(1,1)
+    if gripper_working:
+        gripper.write_robot_dout(3,0)
+        gripper.write_robot_dout(1,1)
     print "drop"
     rospy.sleep(.05)
-    gripper.write_robot_dout(1,0)
+    if gripper_working:
+        gripper.write_robot_dout(1,0)
     
 def shutdown():
     print "Shutting down mover. Returning to neutral..."
-    gripper.write_robot_dout(1,0)
-    gripper.write_robot_dout(3,0)
+    if gripper_working:
+        gripper.write_robot_dout(1,0)
+        gripper.write_robot_dout(3,0)
     goto(pose_neutral)
     print "bye!"
   
     
 
 if __name__ == '__main__':
-    gripper = FanucCGIO('192.168.1.69')
+    if gripper_working:
+        gripper = FanucCGIO('192.168.1.69')
 #    rdio = gripper.read_robot_dout(1)
 #    print("RDOUT[1] is currently {0}".format("On" if rdio == 1 else "Off"))
     
