@@ -1,0 +1,226 @@
+#!/usr/bin/env python
+
+print "Importing"
+import rospy
+import moveit_commander
+import sys
+import numpy as np
+import geometry_msgs.msg
+import moveit_msgs.msg
+from geometry_msgs.msg import PoseStamped, PoseArray, Pose
+import tf2_ros
+import tf2_geometry_msgs
+from pcl_helper import *
+from tf2_sensor_msgs.tf2_sensor_msgs import do_transform_cloud
+from ros_cgio_py import FanucCGIO
+from numpy.random import choice
+from sensor_msgs.msg import PointCloud2
+print "Import complete"
+
+gripper_working = True
+
+def recieve_cloud(pc):
+    center = Pose()
+    
+    
+    print "Yay we got a cloud"
+    
+    pc_tf = do_transform_cloud(pc, kinect_transform)
+    
+    cloud = ros_to_pcl(pc_tf)
+    
+    xs = []
+    ys = []
+    zs = []
+    
+    for point in cloud:
+        xs.append(point[0])
+        ys.append(point[1])
+        zs.append(point[2])
+    
+ 
+    center.position.x = np.mean(xs)
+    center.position.y = np.mean(ys)
+    center.position.z = np.min(zs)
+    
+    print "(x:%.1f y:%.1f z:%.1f)" % ((center.position.x)*100, (center.position.y)*100, (center.position.z)*100)
+    
+
+def goto(goal, constraints=False):
+    print "Recieved (%.2f,%.2f,%.2f)" % (goal.position.x, goal.position.y, goal.position.z)
+    one_arm.set_pose_target(goal)
+#    if constraints:
+#        one_arm.set_path_constraints()
+    plan1 = one_arm.plan()
+        
+    one_arm.go(wait=True)    
+    
+def posemake(position, orientation):
+    new_pose = Pose()
+    new_pose.position.z = position[2]
+    new_pose.position.y = position[1]
+    new_pose.position.x = position[0]
+    
+    new_pose.orientation.x = orientation[0]
+    new_pose.orientation.y = orientation[1]
+    new_pose.orientation.z = orientation[2]
+    new_pose.orientation.w = orientation[3]
+        
+    return new_pose
+    
+def pick_points(goal_array):
+    print "recieved new pose array"
+    
+    goals = get_box()
+    
+    PS = next((item for item in pose_dict if item["name"] == "PS"), None)
+
+    goal_pose = posemake(PS["position"],PS["orientation"])
+    
+#    for pick_pose in goal_array.poses:
+    
+        
+    # TODO Build confidence map
+    pick_place(goal_array.poses[0], goal_pose)
+    
+    rospy.sleep(5)
+    
+def recieve_goal(goal_array):
+    print "recieved new pose array"
+    
+    goals = get_box()
+    
+    PS = next((item for item in pose_dict if item["name"] == "PS"), None)
+
+    goal_pose = posemake(PS["position"],PS["orientation"])
+    
+#    for pick_pose in goal_array.poses:
+    
+        
+    # TODO Build confidence map
+    pick_place(goal_array.pose, goal_pose)
+    
+    rospy.sleep(5)
+    
+def pick_place(pick_pose, goal_pose):
+    print "recieved new pick location"
+    pick_pub.publish(pick_pose)
+    if pick_pose.position.z > .5:
+        pick_pose.position.z += .19
+        pick_pose.position.y -= .08
+        goto(pick_pose)
+        pick_pose.position.z -= .06
+        goto(pick_pose)
+        pickup()
+        
+        pick_pose.position.z += .1
+        goto(pick_pose)
+        
+#        print "moving to neutral"
+#        goto(pose_neutral)
+        
+        print "moving to place location"
+        
+        goto(goal_pose)
+        drop()
+    
+    else:
+        print "Z-coordinate is dangerously low: %.2f" %pick_pose.position.z
+    
+    print "returning to neutral"        
+    goto(pose_neutral)
+
+    
+def pickup():
+    if gripper_working:
+        gripper.write_robot_dout(3,1)
+    print "pickup"
+    
+def drop():
+    if gripper_working:
+        gripper.write_robot_dout(3,0)
+        gripper.write_robot_dout(1,1)
+    print "drop"
+    rospy.sleep(.03)
+    if gripper_working:
+        gripper.write_robot_dout(1,0)
+    
+def shutdown():
+    print "Shutting down mover. Returning to neutral..."
+    if gripper_working:
+        gripper.write_robot_dout(1,0)
+        gripper.write_robot_dout(3,0)
+    goto(pose_neutral)
+    print "bye!"
+    
+def get_box():
+    boxes = rospy.get_param('/dropzones')
+    
+    box_dict = []
+    
+    for i in xrange(len(boxes)):
+        box_name = boxes[i]['name']
+        box_location = boxes[i]['position']
+        box_pose = boxes[i]['orientation']
+        box_info = {"name": box_name, "position": box_location, "orientation": box_pose}
+        box_dict.append(box_info)
+        
+    return box_dict
+    
+def calibrate(goal_array):
+    print "Refreshed:"
+    for pick_pose in goal_array.poses:
+        print "(x:%.2f y:%.2f z:%.2f)" % ((pick_pose.position.x-.783)*100, (pick_pose.position.y)*100, (pick_pose.position.z)*100)
+        
+  
+    
+
+if __name__ == '__main__':
+    # ROS node initialization
+    rospy.init_node('goalsender', anonymous=True)
+    
+    if gripper_working:
+        gripper = FanucCGIO('192.168.1.69')
+#    rdio = gripper.read_robot_dout(1)
+#    print("RDOUT[1] is currently {0}".format("On" if rdio == 1 else "Off"))
+    
+    moveit_commander.roscpp_initialize(sys.argv)
+    
+    rob = moveit_commander.RobotCommander()
+    one_arm = moveit_commander.MoveGroupCommander("manipulator")
+    one_arm.set_workspace([-1,.1,1,1])
+    print rob.get_current_state()
+    print "Connected to One Arm"
+    
+    tbuff = tf2_ros.Buffer()
+    tlis = tf2_ros.TransformListener(tbuff)
+    try:
+        kinect_transform = tbuff.lookup_transform("base_link", "kinect2_ir_optical_frame", rospy.Time(0), rospy.Duration(1.0))
+    except tf2.LookupException as ex:
+        print "tf2 exception"
+    
+    pose_dict = get_box()
+    
+    neutral = next((item for item in pose_dict if item["name"] == "neutral"), None)
+    
+    pose_neutral = posemake(neutral["position"],neutral["orientation"])
+    goto(pose_neutral)
+    
+    
+            
+    
+    
+    #publish for visualization
+    pick_pub = rospy.Publisher("/pick_point", Pose, queue_size=1)
+    
+    # Create Subscribers
+#    goals_sub = rospy.Subscriber("/goal_list", PoseArray, pick_points, queue_size=1)
+#    goals_sub = rospy.Subscriber("/goal_list", PoseArray, calibrate, queue_size=1)
+#    goal_sub = rospy.Subscriber("/goal_single", PoseStamped, recieve_goal, queue_size=1)
+    cloud_sub = rospy.Subscriber("/cluster", PointCloud2, recieve_cloud, queue_size=1)
+	
+    while not rospy.is_shutdown():
+        print "Node running"
+        rospy.spin()
+        
+    rospy.on_shutdown(shutdown)

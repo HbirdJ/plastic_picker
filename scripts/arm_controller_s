@@ -80,19 +80,19 @@ def recieve_goals(goal_array):
     print "recieved new pose array"
     for goal_pose in goal_array.poses:
         if goal_pose.position.z > .15:
-#            print goal_pose.position
+            print goal_pose.position
             
-            goal_pose.position.z += .2
+            goal_pose.position.z += .1
             goto(goal_pose)
-            goal_pose.position.z -= .21
-            goto(goal_pose)
-            pickup()
+#            goal_pose.position.z -= .21
+#            goto(goal_pose)
+#            pickup()
             
-            goal_pose.position.z += .6
-            goto(goal_pose)
+#            goal_pose.position.z += .6
+#            goto(goal_pose)
             
-            goto(pose_blue)
-            drop()
+#            goto(pose_blue)
+#            drop()
         else:
             print "Z-coordinate is dangerously low"
             
@@ -100,7 +100,7 @@ def recieve_goals(goal_array):
     goal_pose.position.y = 0
     goal_pose.position.x = .8
     goto(pose_neutral)
-    rospy.sleep(10)
+    rospy.sleep(5)
     
 def recieve_goal(goal_pose):
     print "recieved new pose"
@@ -189,8 +189,8 @@ if __name__ == '__main__':
     rospy.init_node('goalsender', anonymous=True)
     
     # Create Subscribers
-#    goals_sub = rospy.Subscriber("/goal_list", PoseArray, recieve_goals, queue_size=1)
-    goal_sub = rospy.Subscriber("/goal_single", PoseStamped, recieve_goal, queue_size=1)
+    goals_sub = rospy.Subscriber("/goal_list", PoseArray, recieve_goals, queue_size=1)
+#    goal_sub = rospy.Subscriber("/goal_single", PoseStamped, recieve_goal, queue_size=1)
 	
     while not rospy.is_shutdown():
         print "Node running"

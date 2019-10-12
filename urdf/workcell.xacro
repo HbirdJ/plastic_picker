@@ -1,0 +1,162 @@
+<?xml version="1.0" ?>
+<robot name="fanuc_m10ia" xmlns:xacro="http://wiki.ros.org/xacro">
+    <xacro:include filename="$(find fanuc_m10ia_support)/urdf/m10ia_macro.xacro"/>
+    <xacro:fanuc_m10ia prefix=""/>
+    <xacro:include filename="$(find fanuc_resources)/urdf/common_materials.xacro"/>
+    <link name="world"/>
+    <link name="ddwframe">
+        <visual>
+            <geometry>
+                <box size="4.2 4.2 .01"/>
+            </geometry>
+            <xacro:material_fanuc_grey />
+        </visual>
+        <collision>
+            <geometry>
+                <box size="0 0 0"/>
+            </geometry>
+        </collision>
+    </link>
+    <link name="table">
+        <visual>
+            <geometry>
+                <box size=".5 1.5 .5"/>
+            </geometry>
+            <xacro:material_fanuc_white />
+        </visual>
+        <collision>
+            <geometry>
+                <box size=".5 1.5 .5"/>
+            </geometry>
+        </collision>
+    </link>
+    <link name="place_table">
+        <visual>
+            <geometry>
+                <box size="1.5 .5 .5"/>
+            </geometry>
+            <xacro:material_fanuc_white />
+        </visual>
+        <collision>
+            <geometry>
+                <box size="1.5 .5 .5"/>
+            </geometry>
+        </collision>
+    </link>
+    <link name="ramp">
+        <visual>
+            <geometry>
+                <box size="1.5 .5 .01"/>
+            </geometry>
+            <xacro:material_fanuc_white />
+        </visual>
+        <collision>
+            <geometry>
+                <box size="1.5 .5 .01"/>
+            </geometry>
+        </collision>
+    </link>
+    <link name="tripod">
+        <visual>
+            <geometry>
+                <box size=".03 1.5 1.7"/>
+            </geometry>
+            <xacro:material_fanuc_grey />
+        </visual>
+        <collision>
+            <geometry>
+                <box size=".03 1.5 1.7"/>
+            </geometry>
+        </collision>
+    </link>
+    <link name="bumper1">
+        <visual>
+            <geometry>
+                <box size=".012 1.5 .1"/>
+            </geometry>
+            <xacro:material_fanuc_white />
+        </visual>
+        <collision>
+            <geometry>
+                <box size=".012 1.5 .1"/>
+            </geometry>
+        </collision>
+    </link>
+    <link name="bumper2">
+        <visual>
+            <geometry>
+                <box size=".012 1.5 .1"/>
+            </geometry>
+            <xacro:material_fanuc_white />
+        </visual>
+        <collision>
+            <geometry>
+                <box size=".012 1.5 .1"/>
+            </geometry>
+        </collision>
+    </link>
+    <link name="eeef">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://plastic_picker/meshes/eef_visual.stl" scale="0.0254 0.0254 0.0254"/>
+        </geometry>
+        <xacro:material_fanuc_gray40 />
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry> 
+          <mesh filename="package://plastic_picker/meshes/eef_collision.stl" scale="0.0254 0.0254 0.0254"/>
+        </geometry>
+      </collision>
+    </link>
+    
+    
+    
+    <joint name="world_to_table" type="fixed">
+        <parent link="base_link"/>
+        <child link="table"/>
+        <origin xyz="0.783 0.0 0.25" rpy="0 0 0"/>
+    </joint>
+    <joint name="world_to_place" type="fixed">
+        <parent link="base_link"/>
+        <child link="place_table"/>
+        <origin xyz="-.217 1.653 0.25" rpy="0 0 0"/>
+    </joint>
+    <joint name="ramp_table" type="fixed">
+        <parent link="place_table"/>
+        <child link="ramp"/>
+        <origin xyz="0.0 -.4 0.35" rpy="-.6 0 0"/>
+    </joint>
+    <joint name="tripod_table" type="fixed">
+        <parent link="table"/>
+        <child link="tripod"/>
+        <origin xyz="0.45 0.0 0.6" rpy="0 0 0"/>
+    </joint>
+    <joint name="bump1_table" type="fixed">
+        <parent link="table"/>
+        <child link="bumper1"/>
+        <origin xyz="0.256 0.0 0.25" rpy="0 0 0"/>
+    </joint>
+    <joint name="bump2_table" type="fixed">
+        <parent link="table"/>
+        <child link="bumper2"/>
+        <origin xyz="-0.256 0.0 0.25" rpy="0 0 0"/>
+    </joint>
+    <joint name="ddw" type="fixed">
+        <parent link="world"/>
+        <child link="ddwframe"/>
+        <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+    </joint>
+    <joint name="world_to_robot" type="fixed">
+        <parent link="base_link"/>
+        <child link="world"/>
+        <origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+    </joint>
+    <joint name="eef_connect" type="fixed">
+        <parent link="flange"/>
+        <child link="eeef"/>
+        <origin xyz="0.006 0.0 0.0" rpy="0 -1.57 0"/>
+    </joint>
+    
+</robot>

@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf2_sensor_msgs
   pcl_conversions
   pcl_ros
+  industrial_trajectory_filters
 )
 
 ## System dependencies are found with CMake's conventions

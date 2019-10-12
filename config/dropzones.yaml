@@ -1,0 +1,19 @@
+dropzones:
+  - name: PP
+    position: [.341,.885,1.1]
+    orientation: [0.7071068,0.7071068,0.0,0.0]
+  - name: PE
+    position: [-091,.850,1.1]
+    orientation: [0.7071068,0.7071068,0.0,0.0]
+  - name: PS
+    position: [-0.576,0.850,1.1]
+    orientation: [0.7071068,0.7071068,0.0,0.0]
+  - name: neutral
+    position: [0.39,0.0,1.0]
+    orientation: [1.0,0.0,0.0,0.0]
+sensors:
+    kinect2_ir:
+        type: rgbd_camera
+        pose:
+            xyz: [1.0, 0, 1.5]
+            rpy: [1.5708, 0, 3.39]
