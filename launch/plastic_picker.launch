@@ -42,7 +42,7 @@
 
     
 <!--Broadcast transform for PP V4 setup    -->
-    <node pkg="tf2_ros" type="static_transform_publisher" name="kinect2robot_broadcaster" args="1.21 0 1.65 1.5708 0 3.39 base_link kinect2_ir_optical_frame" />
+    <node pkg="tf2_ros" type="static_transform_publisher" name="kinect2robot_broadcaster" args="1.20 0.03 1.65 1.5708 0 3.39 world kinect2_ir_optical_frame" />
     
 <!--    iai Kinect2 data-->
     <arg name="base_name"         default="kinect2"/>
@@ -58,8 +58,8 @@
     <arg name="depth_device"      default="-1"/>
     <arg name="reg_method"        default="default"/>
     <arg name="reg_device"        default="-1"/>
-    <arg name="max_depth"         default="1.295"/>
-    <arg name="min_depth"         default=".83"/>
+    <arg name="max_depth"         default="1.31"/>
+    <arg name="min_depth"         default=".75"/>
     <arg name="queue_size"        default="1"/>
     <arg name="bilateral_filter"  default="true"/>
     <arg name="edge_aware_filter" default="true"/>
@@ -75,7 +75,7 @@
     <machine name="localhost" address="localhost" if="$(arg use_machine)"/>
 
     <node pkg="nodelet" type="nodelet" name="$(arg nodelet_manager)" args="manager"
-        if="$(arg start_manager)" machine="$(arg machine)" output="screen"/>
+        if="$(arg start_manager)" machine="$(arg machine)" output="log"/>
 
     <!-- Nodelet version of kinect2_bridge -->
 <!--    <node pkg="nodelet" type="nodelet" name="$(arg base_name)_bridge" machine="$(arg machine)"-->
@@ -136,8 +136,9 @@
         <param name="queue_size" type="int" value="$(arg queue_size)"/>
     </node>
 
-    <node name="segmentation_cpp" pkg="plastic_picker" type="segmentation_cpp" output="screen" />
-    <node name="segmentation" pkg="plastic_picker" type="segmentation" output="screen" />
+    <node name="segmentation_cpp" pkg="plastic_picker" type="segmentation_cpp" output="log" />
+    <node name="segmentation" pkg="plastic_picker" type="segmentation" output="log" />
+    <node name="object_sorter" pkg="plastic_picker" type="object_sorter" output="screen" launch-prefix="xterm -e" />
 
     <rosparam file="$(find plastic_picker)/config/dropzones.yaml" />
 

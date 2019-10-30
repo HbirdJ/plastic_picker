@@ -1,0 +1,110 @@
+#!/usr/bin/env python
+
+print "Importing"
+
+import pickle
+import os
+
+import rospy
+import moveit_commander
+import sys
+import numpy as np
+import geometry_msgs.msg
+import moveit_msgs.msg
+from geometry_msgs.msg import PoseStamped, PoseArray, Pose
+import tf2_ros
+import tf2_geometry_msgs
+from pcl_helper import *
+from cloud_analysis import svg_feature
+from tf2_sensor_msgs.tf2_sensor_msgs import do_transform_cloud
+from ros_cgio_py import FanucCGIO
+from numpy.random import choice
+from sensor_msgs.msg import PointCloud2
+from sklearn import svm
+print "Import complete"
+
+
+def recieve_cloud(pc):
+    center = Pose()
+    
+    
+    print "Yay we got a cloud"
+    
+    cloud = ros_to_pcl(pc)
+    
+    xs = []
+    ys = []
+    zs = []
+    
+    feature = svg_feature(cloud)
+    
+    for point in cloud:
+        xs.append(point[0])
+        ys.append(point[1])
+        zs.append(point[2])
+    
+ 
+    center.position.x = np.mean(xs)
+    center.position.y = np.mean(ys)
+    center.position.z = np.max(zs)
+    center.orientation.w =  0.0 
+    center.orientation.x =  1.0
+    center.orientation.y =  0.0
+    center.orientation.z = 0.0
+    
+    goals = get_box()
+    
+    PS = next((item for item in pose_dict if item["name"] == "PS"), None)
+
+    goal_pose = posemake(PS["position"],PS["orientation"])
+    
+#    for pick_pose in goal_array.poses:
+
+    print "(x:%.1f y:%.1f z:%.1f)" % ((center.position.x)*100, (center.position.y)*100, (center.position.z)*100)
+    
+        
+    # TODO Build confidence map
+#    pick_place(center, goal_pose)
+    
+    rospy.sleep(5)
+    
+    print "(x:%.1f y:%.1f z:%.1f)" % ((center.position.x)*100, (center.position.y)*100, (center.position.z)*100)
+    
+    
+def capture_cloud():
+    print "Yay we got a cloud"
+    return rospy.wait_for_message("/cluster", PointCloud2)
+  
+    
+
+if __name__ == '__main__':
+    # ROS node initialization
+    rospy.init_node('capturing', anonymous=True)
+    
+    if os.path.isfile('data.sav'):
+        labeled_data = pickle.load(open('data.sav', 'rb'))
+    else:
+        labeled_data = []
+    exit = ' '
+    
+    count = 0
+    
+    obj_name = raw_input("What object are we analyzing? ")
+    
+    while exit != 'q':
+        if exit == 'n':
+            count = 0
+            obj_name = raw_input("What object are we analyzing? ")
+        cloud = capture_cloud()
+        count = count + 1
+        pcl_cloud = ros_to_pcl(cloud)
+        feature = svg_feature(pcl_cloud)
+        print feature
+        print "Feature #%i of %s" %(count, obj_name)
+        
+        labeled_data.append([feature, obj_name])
+        #check button press
+        exit = raw_input("Enter to continue, 'n' for new item, 'q' to quit: ")
+    
+    	
+    pickle.dump(labeled_data, open('data.sav', 'wb'))

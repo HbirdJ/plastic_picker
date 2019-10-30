@@ -167,8 +167,8 @@ def segmentation():
             
             #passthrough
             cloud_pass1 = passthrough(voxd, 'z', .92, 1.3)
-            cloud_pass2 = passthrough(cloud_pass1, 'y', -.35, .10)
-            pcl_box = passthrough(cloud_pass2, 'x', -.70, .65)
+            cloud_pass2 = passthrough(cloud_pass1, 'y', -.35, .08)
+            pcl_box = passthrough(cloud_pass2, 'x', -.53, .42)
             
             end = time.time()
             print "%.2f s for box" %(end - start)
@@ -276,7 +276,7 @@ def segmentation():
             print "%.2f s for centroid analysis" %(end - start)        
            
 #            print goal_tf.pose.position
-            print "(x:%.1f y:%.1f z:%.1f)" % ((goal_tf.pose.position.x)*100, (goal_tf.pose.position.y)*100, (goal_tf.pose.position.z)*100)
+#            print "(x:%.1f y:%.1f z:%.1f)" % ((goal_tf.pose.position.x)*100, (goal_tf.pose.position.y)*100, (goal_tf.pose.position.z)*100)
                 
 #            Create new cloud containing all clusters, each with unique color
             cloud_clusters = pcl.PointCloud_PointXYZRGB()
@@ -319,7 +319,7 @@ def segmentation():
                 reference_pose = PoseStamped()
                 reference_pose = center_biggest
                 
-            distance = math.sqrt((reference_pose.pose.position.x-center_biggest.pose.position.x)**2+(reference_pose.pose.position.y-center_biggest.pose.position.y)**2+(reference_pose.pose.position.z-center_biggest.pose.position.z)**2)\
+            distance = math.sqrt((reference_pose.pose.position.x-center_biggest.pose.position.x)**2+(reference_pose.pose.position.y-center_biggest.pose.position.y)**2+(reference_pose.pose.position.z-center_biggest.pose.position.z)**2)
             
             print "distance = %.3f" %(distance)
             
@@ -339,13 +339,16 @@ def segmentation():
                     confidence = 0
                     
                     #analyze cluster and identify
-                    confident_cluster = cloud_objects.extract(cluster_indices[biggest_cloud_ind])
-                    ros_cluster = pcl_to_ros(confident_cluster)
+                    print "BCI: %i" %biggest_cloud_ind
+                    print len(cluster_indices)
+                    if len(cluster_indices) > 0:
+                        confident_cluster = cloud_objects.extract(cluster_indices[biggest_cloud_ind])
+                        ros_cluster = pcl_to_ros(confident_cluster)
 
             
-                    ros_goal_tf = do_transform_cloud(ros_cluster, kinect_transform)
+                        ros_goal_tf = do_transform_cloud(ros_cluster, kinect_transform)
 
-                    pcl_clustergoal_pub.publish(ros_goal_tf)
+                        pcl_clustergoal_pub.publish(ros_goal_tf)
 
                     
                         

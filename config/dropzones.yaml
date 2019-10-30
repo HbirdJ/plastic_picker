@@ -1,13 +1,13 @@
 dropzones:
-  - name: PP
-    position: [.341,.885,1.1]
-    orientation: [0.7071068,0.7071068,0.0,0.0]
   - name: PE
-    position: [-091,.850,1.1]
-    orientation: [0.7071068,0.7071068,0.0,0.0]
-  - name: PS
-    position: [-0.576,0.850,1.1]
-    orientation: [0.7071068,0.7071068,0.0,0.0]
+    position: [0.378,0.83,1.18]
+    orientation: [ -0.635000084726, -0.74497558283, -0.168972543317, 0.115041527242 ]
+  - name: PP
+    position: [0.078,0.83,1.18]
+    orientation: [ -0.635000084726, -0.74497558283, -0.168972543317, 0.115041527242 ]
+  - name: Other
+    position: [-0.222,0.83,1.18]
+    orientation: [ -0.635000084726, -0.74497558283, -0.168972543317, 0.115041527242 ]
   - name: neutral
     position: [0.39,0.0,1.0]
     orientation: [1.0,0.0,0.0,0.0]
@@ -17,3 +17,34 @@ sensors:
         pose:
             xyz: [1.0, 0, 1.5]
             rpy: [1.5708, 0, 3.39]
+objects:
+  - name: pe_bigblue
+    group: PE
+  - name: pe_blue
+    group: PE
+  - name: pe_yellow
+    group: PE
+  - name: pe_violet
+    group: PE
+  - name: pe_peach
+    group: PE
+  - name: pe_white
+    group: PE
+  - name: pe_green
+    group: PE
+  - name: pp_orange
+    group: PP
+  - name: pp_salmon
+    group: PP
+  - name: pp_vhsgreen
+    group: PP
+  - name: pp_boxgreen
+    group: PP
+  - name: pp_violet
+    group: PP
+  - name: other_red
+    group: Other
+  - name: other_grey
+    group: Other
+  - name: other_blue
+    group: Other
