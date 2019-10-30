@@ -21,6 +21,7 @@ import sensor_msgs.point_cloud2 as pc2
 from sensor_msgs.msg import PointCloud2
 from visualization_msgs.msg import Marker
 import time
+import math
 
 process = False
 new_msg = False
@@ -111,9 +112,9 @@ def segmentation():
 
     # Create Publishers
     pcl_clusters_pub = rospy.Publisher("/clusters", PointCloud2, queue_size=1)
+    pcl_clustergoal_pub = rospy.Publisher("/cluster", PointCloud2, queue_size=1)
     pcl_box_pub = rospy.Publisher("/pcl_box", PointCloud2, queue_size=1)
     pcl_floor_pub = rospy.Publisher("/pcl_floor", PointCloud2, queue_size=1)
-    #pcl_clusters_pub = rospy.Publisher("/clusters", PointCloud2, queue_size=1)
     pcl_filtered_pub = rospy.Publisher("/filtered", PointCloud2, queue_size=1)
     object_markers_pub = rospy.Publisher("/object_markers", Marker, queue_size=1)
     
@@ -122,14 +123,17 @@ def segmentation():
 
     # Initialize color_list
     get_color_list.color_list = []
+    
+    confidence = 0
 
     # Spin while node is not shutdown
     while not rospy.is_shutdown():
-#        print "Node running"
         
         if new_msg:
             new_msg = False
             process = True
+            
+            
             
             start = time.time()
             print "Point Cloud Recieved. Analyzing..."
@@ -156,18 +160,21 @@ def segmentation():
             threshold = .1
             #outliers = outlier(voxd, neighbors, threshold)
             
+            #passthrough old
+#            cloud_pass1 = passthrough(voxd, 'z', .92, 1.25)
+#            cloud_pass2 = passthrough(cloud_pass1, 'y', -.25, .29)
+#            pcl_box = passthrough(cloud_pass2, 'x', -.70, .65)
+            
             #passthrough
-        #    cloud_pass1 = passthrough(voxd, 'z', .024, 0.15)
-            cloud_pass1 = passthrough(voxd, 'z', .8, 1.3)
-        #    cloud_pass2 = passthrough(cloud_pass1, 'y', .5, 1.35)
-            cloud_pass2 = passthrough(cloud_pass1, 'y', -.5, .3)
-            pcl_box = passthrough(cloud_pass2, 'x', -.5, .4)
+            cloud_pass1 = passthrough(voxd, 'z', .92, 1.3)
+            cloud_pass2 = passthrough(cloud_pass1, 'y', -.35, .08)
+            pcl_box = passthrough(cloud_pass2, 'x', -.53, .42)
             
             end = time.time()
             print "%.2f s for box" %(end - start)
               
             #RANSAC
-            pcl_floor, cloud_objects = ransac(pcl_box, .02)
+            pcl_floor, cloud_objects = ransac(pcl_box, .012)
             
             #Cluster
             white_cloud = XYZRGB_to_XYZ(cloud_objects)
@@ -191,17 +198,9 @@ def segmentation():
             color_cluster_point_list = []
             centroids = []
             goal_poses = PoseArray()
-            goal_poses.header.frame_id = "kinect2_ir_optical_frame"
+            goal_poses.header.frame_id = "base_link"
             goal_poses.header.stamp = rospy.Time.now()
-                    
-                    
-            centroid = PoseStamped()
-            centroid.header.frame_id = "kinect2_ir_optical_frame"
-            centroid.pose.orientation.w =  0.00890861352435 
-            centroid.pose.orientation.x =  0.999909755666
-            centroid.pose.orientation.y =  0.00706809305747
-            centroid.pose.orientation.z = -0.0071525653066
-            
+                                
             marker = Marker()
             marker.header.frame_id = "kinect2_ir_optical_frame"
             marker.type = marker.POINTS
@@ -215,7 +214,14 @@ def segmentation():
             
             goal_tf_highest = PoseStamped()
             goal_tf_highest.header.frame_id = "base_link"
-            goal_tf_highest.pose.position.z = .14   
+            goal_tf_highest.pose.position.z = .14
+            
+            center_biggest = PoseStamped()
+            center_biggest.header.frame_id = "kinect2_ir_optical_frame"
+            
+            biggest_cloud = 0 
+            biggest_cloud_ind = 0
+              
 
             #Iterate through each cluster
             for j, indices in enumerate(cluster_indices):
@@ -234,23 +240,25 @@ def segmentation():
                 
                 centroids.append(center)
                 
-                goal = new_pose(center.position.x - .08,
+                goal = new_pose(center.position.x,
                                 center.position.y, 
-                                center.position.z - .12)
+                                center.position.z)
                 
                 goal_tf = tf2_geometry_msgs.do_transform_pose(goal, kinect_transform)
 
-                if goal_tf.pose.position.z > .26:
-                    goal_tf.pose.orientation = goal_red.orientation
-                elif goal_tf.pose.position.z > .16:
-                    goal_tf.pose.orientation = goal_blue.orientation
-                else:
-                    print "too low"
+                if len(indices) > biggest_cloud:
+                    biggest_cloud = len(indices)
+                    center_biggest.pose = center
+                    biggest_cloud_ind = j
+                    print "biggest cloud index: %i" %(biggest_cloud_ind)
+                    
+                        
+                
 #                print goal_tf.pose.position
 #                goal_tf.pose.orientation = goal_reject.orientation
 #                goal_tf = tf2_geometry_msgs.do_transform_pose(goal, kinect_transform)
                 
-                goal_poses.poses.append(goal_tf)
+                goal_poses.poses.append(goal_tf.pose)
                 
                 if goal_tf.pose.position.z > goal_tf_highest.pose.position.z:
                     goal_tf_highest = goal_tf
@@ -268,51 +276,88 @@ def segmentation():
             print "%.2f s for centroid analysis" %(end - start)        
            
 #            print goal_tf.pose.position
-            print "(x:%.1f y:%.1f z:%.1f)" % ((goal_tf.pose.position.x-.08)*100, (goal_tf.pose.position.y-1)*100, (goal_tf.pose.position.z-(.145+.12))*100)
+#            print "(x:%.1f y:%.1f z:%.1f)" % ((goal_tf.pose.position.x)*100, (goal_tf.pose.position.y)*100, (goal_tf.pose.position.z)*100)
                 
-            #Create new cloud containing all clusters, each with unique color
-#            cloud_clusters = pcl.PointCloud_PointXYZRGB()
-#            cloud_clusters.from_list(color_cluster_point_list)
+#            Create new cloud containing all clusters, each with unique color
+            cloud_clusters = pcl.PointCloud_PointXYZRGB()
+            cloud_clusters.from_list(color_cluster_point_list)
             
-#            for centroid in centroids:
-#                print "(x:%.1f y:%.1f z:%.1f)" % ((centroid.position.x)*100, (centroid.position.y-1)*100, (centroid.position.z-.14)*100)
             
-                
+            
+            #Convert and publish clouds
             object_markers_pub.publish(marker)   
             
+            #PCLs to ROS msg
+            ros_clust = pcl_to_ros(cloud_clusters)
+            ros_filtered = pcl_to_ros(cloud_objects)          
+            ros_box = pcl_to_ros(pcl_box)
             
-#            ros_clust = pcl_to_ros(cloud_clusters)
-#            ros_filtered = pcl_to_ros(cloud_objects)
-            
-#            ros_box = pcl_to_ros(pcl_box)
-#            ros_floor = pcl_to_ros(pcl_floor)
-            
-#            ros_clust_tf = do_transform_cloud(ros_clust, kinect_transform)
-#            ros_filtered_tf = do_transform_cloud(ros_filtered, kinect_transform)
-#            ros_box_tf = do_transform_cloud(ros_box, kinect_transform)
-#            ros_floor_tf = do_transform_cloud(ros_floor, kinect_transform)
-#            
-#            pcl_box_pub.publish(ros_box_tf)
-#            pcl_floor_pub.publish(ros_floor_tf)
-#            
-#            pcl_filtered_pub.publish(ros_filtered_tf)
-#            pcl_clusters_pub.publish(ros_clust_tf)
+            #Transform to correct frame
+            ros_clust_tf = do_transform_cloud(ros_clust, kinect_transform)
+            ros_filtered_tf = do_transform_cloud(ros_filtered, kinect_transform)
+            ros_box_tf = do_transform_cloud(ros_box, kinect_transform)
+
+            #Publish messages
+            pcl_box_pub.publish(ros_box_tf) 
+            pcl_filtered_pub.publish(ros_filtered_tf)
+            pcl_clusters_pub.publish(ros_clust_tf)
 #            raw_input("Press Enter to continue...")
            
             
             goal_tf_highest.pose.orientation.w =  0.0 
-            goal_tf_highest.pose.orientation.x =  0.7071068
-            goal_tf_highest.pose.orientation.y =  0.7071068
+            goal_tf_highest.pose.orientation.x =  1.0
+            goal_tf_highest.pose.orientation.y =  0.0
             goal_tf_highest.pose.orientation.z = 0.0
             
-            goal_pub.publish(goal_tf_highest)
-#            goals_pub.publish(goal_poses)
+#            goal_pub.publish(goal_tf_highest)
+            goals_pub.publish(goal_poses)
             
             end = time.time()
             print (end - start)
             
+            if confidence == 0:
+                reference_pose = PoseStamped()
+                reference_pose = center_biggest
+                
+            distance = math.sqrt((reference_pose.pose.position.x-center_biggest.pose.position.x)**2+(reference_pose.pose.position.y-center_biggest.pose.position.y)**2+(reference_pose.pose.position.z-center_biggest.pose.position.z)**2)
+            
+            print "distance = %.3f" %(distance)
+            
+            if distance < .01:
+                
+                confidence += 1
+                print "Largest cloud appears to be stationary (confidence: %i)" %(confidence)
+                    
+                if (confidence > 5):
+                    print "Confident in pick point"
+                    center_tf = tf2_geometry_msgs.do_transform_pose(center_biggest, kinect_transform)
+                    center_tf.pose.orientation.w =  0.0 
+                    center_tf.pose.orientation.x =  1.0
+                    center_tf.pose.orientation.y =  0.0
+                    center_tf.pose.orientation.z = 0.0
+                    goal_pub.publish(center_tf)
+                    confidence = 0
+                    
+                    #analyze cluster and identify
+                    print "BCI: %i" %biggest_cloud_ind
+                    print len(cluster_indices)
+                    if len(cluster_indices) > 0:
+                        confident_cluster = cloud_objects.extract(cluster_indices[biggest_cloud_ind])
+                        ros_cluster = pcl_to_ros(confident_cluster)
+
+            
+                        ros_goal_tf = do_transform_cloud(ros_cluster, kinect_transform)
+
+                        pcl_clustergoal_pub.publish(ros_goal_tf)
+
+                    
+                        
+            else:
+                print "reset confidence"
+                confidence = 0
+            
             process = False        
-#        rospy.spin()
+
         
 if __name__ == '__main__':
     segmentation()
